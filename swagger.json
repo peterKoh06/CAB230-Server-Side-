@@ -1,0 +1,340 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CAB230 Rentals API",
+    "version": "1.0.0",
+    "description": "REST API for the CAB230 Assignment 3 rentals application"
+  },
+  "servers": [
+    { "url": "http://localhost:3000",  "description": "HTTP (local dev)" },
+    { "url": "https://localhost:3443", "description": "HTTPS (local dev)" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error":   { "type": "boolean", "example": true },
+          "message": { "type": "string" }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "total":       { "type": "integer" },
+          "lastPage":    { "type": "integer" },
+          "prevPage":    { "type": "integer", "nullable": true },
+          "nextPage":    { "type": "integer", "nullable": true },
+          "perPage":     { "type": "integer" },
+          "currentPage": { "type": "integer" },
+          "from":        { "type": "integer" },
+          "to":          { "type": "integer" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/rentals/states": {
+      "get": {
+        "tags": ["Rentals"],
+        "summary": "Get all unique states",
+        "responses": {
+          "200": {
+            "description": "Array of state strings",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rentals/property-types": {
+      "get": {
+        "tags": ["Rentals"],
+        "summary": "Get all unique property types",
+        "responses": {
+          "200": {
+            "description": "Array of property type strings",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rentals/search": {
+      "get": {
+        "tags": ["Rentals"],
+        "summary": "Search rentals with filters",
+        "parameters": [
+          { "name": "state",        "in": "query", "schema": { "type": "string" } },
+          { "name": "propertyType", "in": "query", "schema": { "type": "string" } },
+          { "name": "minBedrooms",  "in": "query", "schema": { "type": "integer" } },
+          { "name": "maxBedrooms",  "in": "query", "schema": { "type": "integer" } },
+          { "name": "minRent",      "in": "query", "schema": { "type": "number" } },
+          { "name": "maxRent",      "in": "query", "schema": { "type": "number" } },
+          { "name": "minBathrooms", "in": "query", "schema": { "type": "integer" } },
+          { "name": "maxBathrooms", "in": "query", "schema": { "type": "integer" } },
+          { "name": "page",         "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "perPage",      "in": "query", "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of rentals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data":       { "type": "array", "items": { "type": "object" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Bad request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/rentals/{id}": {
+      "get": {
+        "tags": ["Rentals"],
+        "summary": "Get a single rental by ID (includes reviews)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Rental object with reviews array" },
+          "404": { "description": "Not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/user/register": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Register a new user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email":    { "type": "string", "format": "email" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "User created" },
+          "400": { "description": "Missing fields",   "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "User exists",      "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/user/login": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Login and receive a JWT",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email":    { "type": "string", "format": "email" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JWT token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token":     { "type": "string" },
+                    "tokenType": { "type": "string", "example": "Bearer" },
+                    "expiresIn": { "type": "integer", "example": 86400 }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing fields",         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Invalid credentials",    "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/user/{email}/profile": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get a user profile. Authorised owner sees dob and address.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "email", "in": "path", "required": true, "schema": { "type": "string", "format": "email" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public or private profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email":     { "type": "string" },
+                    "firstName": { "type": "string", "nullable": true },
+                    "lastName":  { "type": "string", "nullable": true },
+                    "dob":       { "type": "string", "nullable": true, "description": "Only returned to profile owner" },
+                    "address":   { "type": "string", "nullable": true, "description": "Only returned to profile owner" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Invalid/expired JWT",   "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "User not found",        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "put": {
+        "tags": ["Users"],
+        "summary": "Update own profile (requires auth as the same user)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "email", "in": "path", "required": true, "schema": { "type": "string", "format": "email" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["firstName", "lastName", "dob", "address"],
+                "properties": {
+                  "firstName": { "type": "string" },
+                  "lastName":  { "type": "string" },
+                  "dob":       { "type": "string", "example": "1990-01-15", "description": "YYYY-MM-DD, must be in the past" },
+                  "address":   { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated profile" },
+          "400": { "description": "Validation error",     "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Unauthorized",         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden",            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "User not found",       "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/ratings/rentals/{id}": {
+      "post": {
+        "tags": ["Ratings"],
+        "summary": "Submit or update a rating (and optional comment) for a rental",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["rating"],
+                "properties": {
+                  "rating":  { "type": "integer", "minimum": 1, "maximum": 5 },
+                  "comment": { "type": "string", "minLength": 1, "maxLength": 2000 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Rating added/updated" },
+          "400": { "description": "Invalid input",  "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Unauthorized",   "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Rental not found","content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "get": {
+        "tags": ["Ratings"],
+        "summary": "Get current user's rating for a specific rental",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rating object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rating":   { "type": "integer" },
+                    "comment":  { "type": "string" },
+                    "dateTime": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized",    "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Not found",       "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/ratings": {
+      "get": {
+        "tags": ["Ratings"],
+        "summary": "Get all ratings submitted by the current user",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "page",    "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "perPage", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated ratings list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data":       { "type": "array", "items": { "type": "object" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    }
+  }
+}
